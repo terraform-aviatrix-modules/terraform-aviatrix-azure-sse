@@ -29,7 +29,8 @@ module "transit" {
 }
 
 module "sse" {
-  source = "/mnt/c/Users/Dennis/repositories/Modules/terraform-aviatrix-azure-sse"
+  source = "terraform-aviatrix-modulesterraform-aviatrix-azure-sse/aviatrix"
+  version = "0.0.1"
 
   azure_tenant_id     = "xxxxx"
   azure_client_id     = "xxxxx"
