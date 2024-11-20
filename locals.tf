@@ -65,6 +65,8 @@ locals {
     one([for profile in jsondecode(data.http.forwarding_profiles.response_body).value : { id = lookup(profile, "id", null) } if profile.trafficForwardingType == i])
   ]
 
-  bearer_token        = jsondecode(data.http.azure_bearer_token.response_body).access_token
-  sse_endpoint_config = jsondecode(data.http.device_config.response_body)
+  bearer_token           = jsondecode(data.http.azure_bearer_token.response_body).access_token
+  sse_endpoint_config    = jsondecode(data.http.device_config.response_body)
+  sse_endpoint_config_ha = local.is_ha ? jsondecode(data.http.device_config_ha[0].response_body) : null
+  is_ha                  = !(var.transit_gateway.ha_gw_size == null || var.transit_gateway.ha_gw_size == "")
 }

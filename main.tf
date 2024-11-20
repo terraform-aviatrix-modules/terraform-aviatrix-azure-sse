@@ -31,9 +31,8 @@ resource "restapi_object" "remote_network" {
   provider = restapi
   path     = "/"
   data = jsonencode({
-    name   = format("Aviatrix SSE Hub - %s", var.transit_gateway.vpc_reg)
-    region = "centralUS" #Hardcoded for beta
-    # region             = lookup(local.azure_region_names, var.transit_gateway.vpc_reg)
+    name               = format("Aviatrix SSE Hub - %s", var.transit_gateway.vpc_reg)
+    region             = lookup(local.azure_region_names, var.transit_gateway.vpc_reg)
     forwardingProfiles = local.profiles
     devicelinks = [
       {
@@ -67,6 +66,47 @@ resource "restapi_object" "remote_network" {
   })
 }
 
+#Create remote network for HA
+resource "restapi_object" "remote_network_ha" {
+  count    = local.is_ha ? 1 : 0
+  provider = restapi
+  path     = "/"
+  data = jsonencode({
+    name               = format("Aviatrix SSE Hub - %s - HA", var.transit_gateway.vpc_reg)
+    region             = lookup(local.azure_region_names, var.transit_gateway.vpc_reg)
+    forwardingProfiles = local.profiles
+    devicelinks = [
+      {
+        name                    = "AVX-Transit-HA"
+        ipAddress               = var.transit_gateway.ha_public_ip
+        bandwidthCapacityInMbps = format("mbps%s", var.sse_bandwidth)
+        deviceVendor            = "other"
+        bgpConfiguration = {
+          localIpAddress = cidrhost(var.tunnel_subnets[1], 1)
+          peerIpAddress  = cidrhost(var.tunnel_subnets[1], 2)
+          asn            = var.transit_gateway.local_as_number
+        }
+        redundancyConfiguration = {
+          zoneLocalIpAddress = null
+          redundancyTier     = "noRedundancy"
+        }
+        tunnelConfiguration = {
+          "@odata.type"              = "#microsoft.graph.networkaccess.tunnelConfigurationIKEv2Custom"
+          preSharedKey               = random_password.psk.result
+          zoneRedundancyPreSharedKey = null
+          saLifeTimeSeconds          = 300
+          ipSecEncryption            = "none"
+          ipSecIntegrity             = "sha256"
+          ikeEncryption              = "aes128"
+          ikeIntegrity               = "sha256"
+          dhGroup                    = "dhGroup14"
+          pfsGroup                   = "pfs14"
+        }
+      }
+    ]
+  })
+}
+
 data "http" "device_config" {
   url = "https://graph.microsoft.com/beta/networkAccess/connectivity/remoteNetworks/${restapi_object.remote_network.id}/connectivityConfiguration"
   request_headers = {
@@ -76,26 +116,35 @@ data "http" "device_config" {
   depends_on = [time_sleep.wait_for_sse_endpoint]
 }
 
-resource "time_sleep" "wait_for_sse_endpoint" {
-  depends_on      = [restapi_object.remote_network]
-  create_duration = "90s"
+data "http" "device_config_ha" {
+  count = local.is_ha ? 1 : 0
+  url   = "https://graph.microsoft.com/beta/networkAccess/connectivity/remoteNetworks/${restapi_object.remote_network_ha[0].id}/connectivityConfiguration"
+  request_headers = {
+    Authorization = "Bearer ${local.bearer_token}"
+    Accept        = "application/json"
+  }
+  depends_on = [time_sleep.wait_for_sse_endpoint]
 }
 
-output "test" {
-  value = local.profiles
+resource "time_sleep" "wait_for_sse_endpoint" {
+  depends_on = [
+    restapi_object.remote_network,
+    restapi_object.remote_network_ha,
+  ]
+  create_duration = "90s"
 }
 
 resource "aviatrix_transit_external_device_conn" "sse_connection" {
   vpc_id                  = var.transit_gateway.vpc_id
   connection_name         = format("avx-sse-%s", lower(replace(var.transit_gateway.vpc_reg, " ", "-")))
   gw_name                 = var.transit_gateway.gw_name
-  remote_gateway_ip       = local.sse_endpoint_config["links"][0]["localConfigurations"][0]["endpoint"]
+  remote_gateway_ip       = local.is_ha ? format("%s,%s", local.sse_endpoint_config["links"][0]["localConfigurations"][0]["endpoint"], local.sse_endpoint_config_ha["links"][0]["localConfigurations"][0]["endpoint"]) : local.sse_endpoint_config["links"][0]["localConfigurations"][0]["endpoint"]
   connection_type         = "bgp"
   bgp_local_as_num        = var.transit_gateway.local_as_number
   bgp_remote_as_num       = local.sse_endpoint_config["links"][0]["localConfigurations"][0]["asn"]
   ha_enabled              = false
-  local_tunnel_cidr       = format("%s/30", cidrhost(var.tunnel_subnets[0], 2))
-  remote_tunnel_cidr      = format("%s/30", cidrhost(var.tunnel_subnets[0], 1))
+  local_tunnel_cidr       = local.is_ha ? format("%s/30,%s/30", cidrhost(var.tunnel_subnets[0], 2), cidrhost(var.tunnel_subnets[1], 2)) : format("%s/30", cidrhost(var.tunnel_subnets[0], 2))
+  remote_tunnel_cidr      = local.is_ha ? format("%s/30,%s/30", cidrhost(var.tunnel_subnets[0], 1), cidrhost(var.tunnel_subnets[1], 1)) : format("%s/30", cidrhost(var.tunnel_subnets[0], 1))
   custom_algorithms       = true
   pre_shared_key          = random_password.psk.result
   phase_1_authentication  = "SHA-256"
