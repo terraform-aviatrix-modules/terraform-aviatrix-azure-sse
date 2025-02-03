@@ -52,3 +52,13 @@ variable "transit_gateway" {
     error_message = "The Aviatrix transit gateway must have a local_as_number configured."
   }
 }
+
+variable "redundancy" {
+  description = "Specifies the Device link SKU .The possible values are: noRedundancy, zoneRedundancy."
+  default     = "noRedundancy"
+
+  validation {
+    condition     = contains(["noRedundancy", "zoneRedundancy"], var.redundancy)
+    error_message = "The redundancy variable must be one of the following values: noRedundancy, zoneRedundancy."
+  }
+}

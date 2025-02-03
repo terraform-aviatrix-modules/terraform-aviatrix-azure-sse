@@ -65,8 +65,65 @@ locals {
     one([for profile in jsondecode(data.http.forwarding_profiles.response_body).value : { id = lookup(profile, "id", null) } if profile.trafficForwardingType == i])
   ]
 
-  bearer_token           = jsondecode(data.http.azure_bearer_token.response_body).access_token
-  sse_endpoint_config    = jsondecode(data.http.device_config.response_body)
-  sse_endpoint_config_ha = local.is_ha ? jsondecode(data.http.device_config_ha[0].response_body) : null
-  is_ha                  = !(var.transit_gateway.ha_gw_size == null || var.transit_gateway.ha_gw_size == "")
+  bearer_token        = jsondecode(data.http.azure_bearer_token.response_body).access_token
+  sse_endpoint_config = jsondecode(data.http.device_config.response_body)
+  is_ha               = !(var.transit_gateway.ha_gw_size == null || var.transit_gateway.ha_gw_size == "")
+
+  primary_gw_link = {
+    name                    = "AVX-Transit"
+    ipAddress               = var.transit_gateway.public_ip
+    bandwidthCapacityInMbps = format("mbps%s", var.sse_bandwidth)
+    deviceVendor            = "other"
+    bgpConfiguration = {
+      localIpAddress = cidrhost(var.tunnel_subnets[0], 1)
+      peerIpAddress  = cidrhost(var.tunnel_subnets[0], 2)
+      asn            = var.transit_gateway.local_as_number
+    }
+    redundancyConfiguration = {
+      zoneLocalIpAddress = null
+      redundancyTier     = "noRedundancy"
+    }
+    tunnelConfiguration = {
+      "@odata.type"              = "#microsoft.graph.networkaccess.tunnelConfigurationIKEv2Custom"
+      preSharedKey               = random_password.psk.result
+      zoneRedundancyPreSharedKey = null
+      saLifeTimeSeconds          = 300
+      ipSecEncryption            = "none"
+      ipSecIntegrity             = "sha256"
+      ikeEncryption              = "aes128"
+      ikeIntegrity               = "sha256"
+      dhGroup                    = "dhGroup14"
+      pfsGroup                   = "pfs14"
+    }
+  }
+
+  ha_gw_link = {
+    name                    = "AVX-Transit-HA"
+    ipAddress               = var.transit_gateway.ha_public_ip
+    bandwidthCapacityInMbps = format("mbps%s", var.sse_bandwidth)
+    deviceVendor            = "other"
+    bgpConfiguration = {
+      localIpAddress = cidrhost(var.tunnel_subnets[1], 1)
+      peerIpAddress  = cidrhost(var.tunnel_subnets[1], 2)
+      asn            = var.transit_gateway.local_as_number
+    }
+    redundancyConfiguration = {
+      zoneLocalIpAddress = null
+      redundancyTier     = "noRedundancy"
+    }
+    tunnelConfiguration = {
+      "@odata.type"              = "#microsoft.graph.networkaccess.tunnelConfigurationIKEv2Custom"
+      preSharedKey               = random_password.psk.result
+      zoneRedundancyPreSharedKey = null
+      saLifeTimeSeconds          = 300
+      ipSecEncryption            = "none"
+      ipSecIntegrity             = "sha256"
+      ikeEncryption              = "aes128"
+      ikeIntegrity               = "sha256"
+      dhGroup                    = "dhGroup14"
+      pfsGroup                   = "pfs14"
+    }
+  }
+
+  links = local.is_ha ? [local.primary_gw_link, local.ha_gw_link] : [local.primary_gw_link]
 }
