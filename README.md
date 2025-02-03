@@ -12,7 +12,7 @@ As Azure's Terraform provider currently does not yet support the creation of the
 ### Compatibility
 Module version | Terraform version | Controller version | Terraform provider version
 :--- | :--- | :--- | :---
-v1.0.0 | >=1.3 | >= 7.0 | >= 3.0.0
+v1.1.0 | >=1.3 | >= 7.0 | >= 3.0.0
 
 ### Usage Example
 ```hcl
@@ -30,7 +30,7 @@ module "transit" {
 
 module "sse" {
   source  = "terraform-aviatrix-modulesterraform-aviatrix-azure-sse/aviatrix"
-  version = "1.0.0"
+  version = "1.1.0"
 
   azure_tenant_id     = "xxxxx"
   azure_client_id     = "xxxxx"

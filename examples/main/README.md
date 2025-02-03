@@ -14,7 +14,7 @@ module "transit" {
 
 module "sse" {
   source = "terraform-aviatrix-modulesterraform-aviatrix-azure-sse/aviatrix"
-  version = "1.0.0"
+  version = "1.1.0"
 
   azure_tenant_id     = "xxxxx"
   azure_client_id     = "xxxxx"
