@@ -32,7 +32,7 @@ resource "restapi_object" "remote_network" {
   path     = "/"
   data = jsonencode({
     name               = format("Aviatrix SSE Hub - %s", var.transit_gateway.vpc_reg)
-    region             = lookup(local.azure_region_names, var.transit_gateway.vpc_reg)
+    region             = lookup(local.azure_region_names, var.location)
     forwardingProfiles = local.profiles
     devicelinks        = local.links
   })

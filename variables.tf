@@ -62,3 +62,8 @@ variable "redundancy" {
     error_message = "The redundancy variable must be one of the following values: noRedundancy, zoneRedundancy."
   }
 }
+
+variable "location" {
+  description = "The Azure region where to provision the SSE remote network. E.g. \"East US\"."
+  type        = string
+}

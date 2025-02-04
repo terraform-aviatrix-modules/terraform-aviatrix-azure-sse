@@ -35,6 +35,7 @@ module "sse" {
   azure_tenant_id     = "xxxxx"
   azure_client_id     = "xxxxx"
   azure_client_secret = "xxxxx"
+  location            = "West Europe"
 
   transit_gateway = module.transit.transit_gateway
 }
@@ -46,6 +47,7 @@ module "sse" {
 | <a name="input_azure_client_id"></a> [azure\_client\_id](#input\_azure\_client\_id) | Azure Client ID | `any` | n/a | yes |
 | <a name="input_azure_client_secret"></a> [azure\_client\_secret](#input\_azure\_client\_secret) | Azure Client Secret | `any` | n/a | yes |
 | <a name="input_azure_tenant_id"></a> [azure\_tenant\_id](#input\_azure\_tenant\_id) | Azure Tenant ID | `any` | n/a | yes |
+| <a name="input_location"></a> [location](#input\_location) | The Azure region where to provision the SSE remote network. E.g. "East US". | `string` | n/a | yes |
 | <a name="input_redundancy"></a> [redundancy](#input\_redundancy) | Specifies the Device link SKU .The possible values are: noRedundancy, zoneRedundancy. | `string` | `"noRedundancy"` | no |
 | <a name="input_sse_bandwidth"></a> [sse\_bandwidth](#input\_sse\_bandwidth) | The desired bandwidth in Mbps. | `number` | `250` | no |
 | <a name="input_sse_forwarding_profiles"></a> [sse\_forwarding\_profiles](#input\_sse\_forwarding\_profiles) | List of the desired forwarding profiles | `list` | <pre>[<br/>  "m365"<br/>]</pre> | no |

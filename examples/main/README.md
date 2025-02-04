@@ -19,6 +19,7 @@ module "sse" {
   azure_tenant_id     = "xxxxx"
   azure_client_id     = "xxxxx"
   azure_client_secret = "xxxxx"
+  location            = "West Europe"
 
   transit_gateway = module.transit.transit_gateway
 }
